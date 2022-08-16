@@ -4,7 +4,7 @@ from datetime import datetime  # 提供用于处理日期和时间的类
 import csv
 from scipy import signal
 import math
-
+import mysql.connector
 
 class DataMaster():
     def __init__(self):
@@ -22,6 +22,7 @@ class DataMaster():
         self.estimate_f = []
         self.deviation_f = []
         self.EstFt = []
+        self.local_frequency=[]
 
         self.estimate_wave = []
 
@@ -34,7 +35,8 @@ class DataMaster():
             "Amplitude": self.Amplitude,
             "Estimate": self.Estimate,
             "Filter": self.Filter,
-            "Deviation_F": self.deviation_F
+            "Deviation_F": self.deviation_F,
+            "Local Frequency":self.local_F
         }
         self.DisplayTimeRange = 5
 
@@ -50,6 +52,14 @@ class DataMaster():
             'Ch2': 'red',
             'Ch3': 'cyan'
         }
+        self.connection=mysql.connector.connect(host="localhost",
+                                   port="3306",
+                                   user="root",
+                                   password="123456",
+                                   database="test"
+                                    )
+        self.cursor =[]
+        # self.cursor = self.connection.cursor() #開始使用
 
     def FileNameFunc(self):
         now = datetime.now()
@@ -90,6 +100,7 @@ class DataMaster():
             if "#" in temp:
                 self.msg = temp.split("#")
                 del self.msg[0]  # 空格刪掉
+                print(self.msg)
 
                 if self.msg[0] in "D":
                     print("Data in D coming in")
@@ -98,6 +109,10 @@ class DataMaster():
                     del self.msg[0]  # 刪除開頭的char D:adcvalue
                     del self.msg[len(self.msg)-1]  # 刪掉最後的'\n'
                     # self.messageLen = int(self.msg[len(self.msg)-1])  # 數據的量有多少
+
+                    #local frequency
+                    self.local=(int(self.msg[len(self.msg)-1])/10000)
+                    del(self.msg[len(self.msg)-1])
 
                     self.rotate= -1 * int(self.msg[len(self.msg)-1]) #rotete adc number
                     del(self.msg[len(self.msg)-1])
@@ -119,9 +134,9 @@ class DataMaster():
                     self.messageLen = int(self.msg[len(self.msg)-1])  # 多少個數據
                     del self.msg[len(self.msg)-1]
 
-                    for item in self.msg:
-                        # self.messageLenCheck +=len(item)
-                        self.messageLenCheck += 1
+                    # for item in self.msg:
+                    #     self.messageLenCheck += 1
+                    self.messageLenCheck =len(self.msg)
                     # print(
                     #     f"messageLenCheck:{self.messageLenCheck },messageLen:{self.messageLen}")
 
@@ -145,13 +160,14 @@ class DataMaster():
 
     def StreamDataCheck(self):
         self.StreamData = False
+        print(f"messageLen:{self.messageLen} || messageLenCheck:{self.messageLenCheck}")
         if self.messageLen == self.messageLenCheck:
             self.StreamData = True
             if len(self.estimate_f) > 5:
                 del self.estimate_f[0]
             self.estimate_f.append(self.test_f)   # 擷取估計頻率
             self.deviation_f.append(self.test_deviation_f)
-
+            self.local_frequency.append(self.local)
             # 寫入txt檔案
             # if self.a == 1:
             #     path = 'adcvalue.txt'
@@ -212,8 +228,10 @@ class DataMaster():
 
     def Frequency(self, gui):
         self.EstFt = np.zeros(len(self.estimate_f))
+        lenx=len(self.XData)
+        lens=len(self.estimate_f)
         for i in range(len(self.estimate_f)):
-            self.EstFt[i] = self.XData[len(self.XData)-len(self.estimate_f)+i]
+            self.EstFt[i] = self.XData[lenx-lens+i]
         # print(self.XData)
         # print("!!!!!!")
         # print(f"frequency:{self.estimate_f}")
@@ -221,7 +239,7 @@ class DataMaster():
         # print("!!!!!!")
         gui.chart.plot(self.EstFt, self.estimate_f, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label=f"f:{self.estimate_f[len(self.estimate_f)-1]}Hz")
-        gui.chart.set_ylim(59, 61)
+        gui.chart.set_ylim(55, 65)
         gui.chart.legend(loc='upper left')
 
     def deviation_F(self, gui):
@@ -233,7 +251,7 @@ class DataMaster():
                 0, len(self.deviation_f)-1, len(self.deviation_f))
         gui.chart.plot(self.DevFt, self.deviation_f, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label=f"f:{self.estimate_f[len(self.estimate_f)-1]}Hz")
-        gui.chart.set_ylim(-1, 1)
+        gui.chart.set_ylim(-5, 5)
         gui.chart.set_xlim(0, 100)
         gui.chart.legend(loc='upper left')
 
@@ -241,14 +259,28 @@ class DataMaster():
         gui.chart.plot(gui.x, (gui.y/4095)*3.3, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label='Input')
         gui.chart.legend(loc='upper left')
-
+    # 打出相對應頻率的弦波
     def Estimate(self, gui):
         t = np.linspace(0,0.1,1000)
         x = np.sin(2*np.pi*self.estimate_f[len(self.estimate_f)-1]*t)
         gui.chart.plot(t, x, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label=f"Esitmate:{self.estimate_f[len(self.estimate_f)-1]}")
-        gui.chart.set_ylim(-1, 1)
+        gui.chart.set_ylim(-5, 5)
         gui.chart.legend(loc='upper left')
+
+    def local_F(self,gui):
+        if len(self.local_frequency) > 100:
+            self.local_frequency.clear()
+            self.local_t.clear()
+        else:
+            self.local_t = np.linspace(
+                0, len(self.local_frequency)-1, len(self.local_frequency))
+        gui.chart.plot(self.local_t, self.local_frequency, color=gui.color,
+                       dash_capstyle='projecting', linewidth=1, label=f"f:{self.local_frequency[len(self.local_frequency)-1]}Hz")
+        gui.chart.set_ylim(55, 65)
+        gui.chart.set_xlim(0, 100)
+        gui.chart.legend(loc='upper left')
+
 
     def Filter(self, gui):
         samplingFreq = self.sample_frequency
@@ -287,3 +319,5 @@ class DataMaster():
         gui.chart.legend(loc='upper left')
         # print(y)
         # print(len(y))
+
+
