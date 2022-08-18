@@ -9,7 +9,7 @@ import numpy as np
 
 
 class RootGUI:
-    def __init__(self, serial, data):  # 設定物件本身(self)屬性
+    def __init__(self, serial, data,sql):  # 設定物件本身(self)屬性
         self.root = Tk()
         self.root.title("Serial_Communication")
         self.root.geometry("400x150")  # 设置窗口的宽和高
@@ -18,6 +18,7 @@ class RootGUI:
 
         self.serial = serial
         self.data = data
+        self.sql=sql
 
         # 窗口管理器显式关闭窗口时发生的情况，執行close_window
         self.root.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -25,18 +26,26 @@ class RootGUI:
     def close_window(self):
         print("Closing the window and exit")
         self.root.destroy()
+
         self.serial.SerialClose()
         self.serial.threading = False
 
+        # self.sql.threading=False
+        self.sql.cursor.close()
+        # self.sql.connection.commit()
+        self.sql.connection.close()
+
 
 class ComGui():
-    def __init__(self, root, serial, data):
+    def __init__(self, root, serial, data,sql):
         # Frame
         self.root = root
         # serial
         self.serial = serial
         # data
         self.data = data
+        #SQL
+        self.sql=sql
         # LabelFrame就像一个容器，负责安排其他部件的位置
         self.frame = LabelFrame(root, text="Com Manger",
                                 padx=5, pady=5, bg="white")
@@ -96,7 +105,7 @@ class ComGui():
         self.button_connect.grid(column=3, row=3)
 
     def com_change(self, widget):  # 下拉式選單(com port)更新確認
-        print("Change Com Port")
+        # print("Change Com Port")
         # print(self.clicked_com.get())
         if "-" in self.clicked_com.get() or "-" in self.clicked_bd.get():
             self.button_connect["state"] = "disable"
@@ -104,8 +113,8 @@ class ComGui():
             self.button_connect["state"] = "active"
 
     def baud_change(self, widget):  # 下拉式選單(baud rate)更新確認
-        print("Change Baud rate")
-        # print(self.clicked_bd.get())
+        # print("Change Baud rate")
+        #兩個都選了 後 connect button 才會active
         if "-" in self.clicked_com.get() or "-" in self.clicked_bd.get():
             self.button_connect["state"] = "disable"
         else:
@@ -118,7 +127,7 @@ class ComGui():
         self.drop_com.grid(column=2, row=2, padx=self.padx, pady=self.pady)
         logic = []
         self.com_change(logic)  # 因為refresh connect button要被取消掉，所以在執行一次程式
-        print("Com Refresh")
+        # print("Com Refresh")
 
     def serial_connect(self):  # button(connect)更新確認
 
@@ -133,7 +142,8 @@ class ComGui():
                 InfoMsg = f"Successful to establish USART connection using {self.clicked_com.get()}"
                 messagebox.showinfo("Successful", InfoMsg)
                 # display the channel manager
-                self.conn = ConnGUI(self.root, self.serial, self.data)
+                # print("self.conn is ok")
+                self.conn = ConnGUI(self.root, self.serial, self.data, self.sql)
                 # daemon thread a thread that runs in the background without worrying about shutting it down.
                 # main跑完 (daemon=True) thread會自動關閉，不會等到thread跑完
                 self.serial.t1 = threading.Thread(
@@ -158,15 +168,17 @@ class ComGui():
             self.drop_baud["state"] = "active"
             self.drop_com["state"] = "active"
 
-
 class ConnGUI():
-    def __init__(self, root, serial, data):
+    def __init__(self, root, serial, data, sql):
         # Frame
         self.root = root
         # serial
         self.serial = serial
         # data
         self.data = data
+        # SQL
+        self.sql = sql
+
         self.frame = LabelFrame(
             root, text="Connection Manger", padx=5, pady=5, bg="white", width=60)
         self.sync_label = Label(
@@ -190,6 +202,8 @@ class ConnGUI():
             self.frame, text="-", state="disabled", width=5, bg="white", fg="#CC252C", command=self.kill_chart)
 
         self.save = False
+        self.sql.save=False
+        self.start_stop_flag=False
         # 設定變數 Int 型別儲存目前內容
         self.SaveVar = IntVar()
         # 設定 variable屬性是可以綁定該 Checkbutton 的勾選狀態
@@ -201,7 +215,7 @@ class ConnGUI():
         self.padx = 20
         self.pady = 15
         self.ConnGUIOpen()
-        self.chartMaster = DisGUI(self.root, self.serial, self.data)
+        self.chartMaster = DisGUI(self.root, self.serial, self.data, self.sql)
 
     def ConnGUIOpen(self):
         self.root.geometry("800x150")
@@ -234,6 +248,7 @@ class ConnGUI():
         self.root.geometry("400x150")
 
     def start_stream(self):
+        self.start_stop_flag=True
         self.button_start_stream["state"] = "disabled"
         self.button_stop_stream["state"] = "active"
         self.serial.t1 = threading.Thread(
@@ -266,16 +281,17 @@ class ConnGUI():
                     color='b', linestyle='-', linewidth=0.2)
                 self.chartMaster.figs[MyChannelOpt][0].canvas.draw()
         except Exception as e:
+            print("UpdataChart Exception error")
             print(e)
         if self.serial.threading:
             self.root.after(40, self.UpdataChart)  # 給定時間後(40mS)呼叫函式
 
     def stop_stream(self):
+        self.start_stop_flag=False
         self.button_start_stream["state"] = "active"
         self.button_stop_stream["state"] = "disabled"
         self.serial.threading = False
         self.data.a = 1
-        self.save = False
 
     def new_chart(self):
         self.chartMaster.AddChannelMaster()
@@ -285,7 +301,7 @@ class ConnGUI():
 
         try:
             if len(self.chartMaster.frames) > 0:
-                print("test2")
+                # print("test2")
                 totalFrame = len(self.chartMaster.frames)-1
                 # 關閉LabelFrame('+','-') 的視窗
                 self.chartMaster.frames[totalFrame].destroy()
@@ -306,20 +322,24 @@ class ConnGUI():
             pass
 
     def sava_data(self):
-        if self.save:
-            self.save = False
-        else:
-            self.save = True
 
+        print("save change")
+        if self.save :
+            self.save = False
+            self.sql.save=False
+        else :
+            self.save = True
+            self.sql.save=True
+        print(f"go in save change : {self.save}")
 # Display GUI interface
 
 
 class DisGUI():
-    def __init__(self, root, serial, data):
+    def __init__(self, root, serial, data,sql):
         self.root = root
         self.serial = serial
         self.data = data
-
+        self.sql=sql
         self.frames = []  # 總共有多少個圖形介面
         self.framesCol = 0  # 每個圖形介面的 起始Col 和 Row
         self.framesRow = 4

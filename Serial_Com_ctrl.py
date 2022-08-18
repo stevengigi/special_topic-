@@ -105,6 +105,8 @@ class SerialCtrl():
                 # self.StartStream="#A#\n"
                 gui.data.RowMsg = self.ser.readline()
                 gui.data.DecodeMsg()
+
+
                 gui.data.StreamDataCheck()
                 if gui.data.StreamData:
                     # start the ref time
@@ -118,10 +120,15 @@ class SerialCtrl():
             try:
 
                 print("DataStream Start")
+                # print(gui.sql.local_f)
                 self.ser.write(gui.data.StartStream.encode())
                 # 確保資料串流
                 gui.data.RowMsg = self.ser.readline()
                 gui.data.DecodeMsg()
+
+                # gui.sql.local_f=gui.data.local
+                # gui.sql.frequency=gui.data.test_f
+
                 gui.data.StreamDataCheck()
                 if gui.data.StreamData:
                     gui.data.UpdataXdata()
@@ -137,11 +144,13 @@ class SerialCtrl():
                     #     f"X:{len(gui.data.XData)},YData_new:{Ysample}")
                     print(f"len(estimate f):{len(gui.data.estimate_f)}")
                     print(f"estimate f:{gui.data.estimate_f}")
-
-                    if gui.save:
-                        t1 = threading.Thread(
-                            target=gui.data.SavaData, args=(gui,), daemon=True)
+                    if gui.save and gui.start_stop_flag:
+                        print("excel save start")
+                        t1 = threading.Thread(target=gui.data.SavaData, args=(gui,), daemon=True)
                         t1.start()
+                        print("SQL save start")
+                        t2=threading.Thread(target=gui.sql.transmit,args=(gui,),daemon=True)
+                        t2.start()
             except Exception as e:
                 print(e)
 
