@@ -52,6 +52,14 @@ class DataMaster():
             'Ch2': 'red',
             'Ch3': 'cyan'
         }
+        self.connection=mysql.connector.connect(host="localhost",
+                                   port="3306",
+                                   user="root",
+                                   password="123456",
+                                   database="test"
+                                    )
+        self.cursor =[]
+        # self.cursor = self.connection.cursor() #開始使用
 
     def FileNameFunc(self):
         now = datetime.now()
@@ -92,7 +100,6 @@ class DataMaster():
             if "#" in temp:
                 self.msg = temp.split("#")
                 del self.msg[0]  # 空格刪掉
-                # print(self.msg)
 
                 if self.msg[0] in "D":
                     print("Data in D coming in")
@@ -125,9 +132,6 @@ class DataMaster():
 
                     self.messageLen = int(self.msg[len(self.msg)-1])  # 多少個數據
                     del self.msg[len(self.msg)-1]
-                    # print(f"self.msg : {self.msg}")
-                    # print(self.messageLen)
-                    # print(f"{len(self.msg)}")
                     # for item in self.msg:
                     #     self.messageLenCheck += 1
                     self.messageLenCheck =len(self.msg)
