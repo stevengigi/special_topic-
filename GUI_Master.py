@@ -202,7 +202,7 @@ class ConnGUI():
             self.frame, text="-", state="disabled", width=5, bg="white", fg="#CC252C", command=self.kill_chart)
 
         self.save = False
-        self.sql.save=False
+        # self.sql.save=False
         self.start_stop_flag=False
         # 設定變數 Int 型別儲存目前內容
         self.SaveVar = IntVar()
@@ -326,10 +326,10 @@ class ConnGUI():
         print("save change")
         if self.save :
             self.save = False
-            self.sql.save=False
+            # self.sql.save=False
         else :
             self.save = True
-            self.sql.save=True
+            # self.sql.save=True
         print(f"go in save change : {self.save}")
 # Display GUI interface
 
@@ -483,8 +483,7 @@ class DisGUI():
 
     def DeleteChannel(self, ChannelFrame):
         if len(ChannelFrame[0].winfo_children()) > 1:
-            ChannelFrame[0].winfo_children()[len(
-                ChannelFrame[0].winfo_children())-1].destroy()
+            ChannelFrame[0].winfo_children()[len(ChannelFrame[0].winfo_children())-1].destroy()
             self.ViewVar[ChannelFrame[1]].pop()
             self.OptionVar[ChannelFrame[1]].pop()
             self.FunVar[ChannelFrame[1]].pop()

@@ -23,7 +23,6 @@ class DataMaster():
         self.deviation_f = []
         self.EstFt = []
         self.local_frequency=[]
-
         self.estimate_wave = []
 
         self.data_test = []
@@ -117,7 +116,7 @@ class DataMaster():
                     del(self.msg[len(self.msg)-1])
 
                     self.test_f = (int(self.msg[len(self.msg)-1])/10000)
-                    self.test_deviation_f = self.test_f - 60
+                    self.test_deviation_f = self.test_f
                     # self.estimate_f.append(
                     #     int(self.msg[len(self.msg)-1])/10000)   # 擷取估計頻率
 
@@ -248,10 +247,12 @@ class DataMaster():
         else:
             self.DevFt = np.linspace(
                 0, len(self.deviation_f)-1, len(self.deviation_f))
+        gui.chart.set_ylabel('Frequency (Hz)')
         gui.chart.plot(self.DevFt, self.deviation_f, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label=f"f:{self.estimate_f[len(self.estimate_f)-1]}Hz")
-        gui.chart.set_ylim(-5, 5)
+        gui.chart.set_ylim(55, 65)
         gui.chart.set_xlim(0, 100)
+
         gui.chart.legend(loc='upper left')
 
     def Amplitude(self, gui):
@@ -274,10 +275,13 @@ class DataMaster():
         else:
             self.local_t = np.linspace(
                 0, len(self.local_frequency)-1, len(self.local_frequency))
+        gui.chart.set_ylabel('Frequency (Hz)')
         gui.chart.plot(self.local_t, self.local_frequency, color=gui.color,
                        dash_capstyle='projecting', linewidth=1, label=f"f:{self.local_frequency[len(self.local_frequency)-1]}Hz")
+
         gui.chart.set_ylim(55, 65)
         gui.chart.set_xlim(0, 100)
+
         gui.chart.legend(loc='upper left')
 
 
